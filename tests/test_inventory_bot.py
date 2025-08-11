@@ -1,12 +1,14 @@
+
+
 import pytest
 from bot import inventory_bot
 from bot.errors import InventoryAPIError, RetryableError
-import logging
-import json
+
 
 def test_process_batch_success():
     duration = inventory_bot.process_batch("test-1")
     assert 0.05 <= duration <= 0.2
+
 
 def test_process_batch_api_error(monkeypatch):
     def always_api_error(batch_id):
@@ -15,23 +17,31 @@ def test_process_batch_api_error(monkeypatch):
     # Should log error and not retry
     inventory_bot.run_bot(worker_id=1, max_batches=1, max_retries=1)
 
+
 def test_process_batch_retryable_error(monkeypatch):
     call_count = {"count": 0}
+
     def fail_then_succeed(batch_id):
         if call_count["count"] < 2:
             call_count["count"] += 1
             raise RetryableError("Temporary fail")
         return 0.1
+
     monkeypatch.setattr(inventory_bot, "process_batch", fail_then_succeed)
     inventory_bot.run_bot(worker_id=2, max_batches=1, max_retries=3)
     assert call_count["count"] == 2
 
+
 def test_dead_letter_queue(monkeypatch):
     def always_retryable(batch_id):
         raise RetryableError("Always fail")
+
     monkeypatch.setattr(inventory_bot, "process_batch", always_retryable)
     # Should end up in dead-letter queue
-    inventory_bot.run_bot(worker_id=3, max_batches=1, max_retries=1)
+    inventory_bot.run_bot(
+        worker_id=3, max_batches=1, max_retries=1
+    )
+
 
 def test_metrics_emission():
     # Metrics should increment for each outcome
@@ -39,9 +49,9 @@ def test_metrics_emission():
     inventory_bot.logger.disabled = True  # Silence logs
     inventory_bot.run_bot(worker_id=4, max_batches=1, max_retries=0)
     after = inventory_bot.BATCH_COUNT.labels(outcome="success")._value.get()
-    assert after == before + 1 or after == before  # May fail if error, but should not decrease
+    assert after == before + 1 or after == before
 
-import pytest
+
 @pytest.mark.usefixtures("caplog")
 def test_logging_output(caplog, monkeypatch):
     import json
@@ -50,7 +60,11 @@ def test_logging_output(caplog, monkeypatch):
     test_logger = logging.getLogger("test_logger")
     test_logger.setLevel(logging.INFO)
     monkeypatch.setattr(inventory_bot, "logger", test_logger)
-    log_msg = {"batch_id": "test-logging", "duration": 0.1, "outcome": "success"}
+    log_msg = {
+        "batch_id": "test-logging",
+        "duration": 0.1,
+        "outcome": "success"
+    }
     with caplog.at_level(logging.INFO, logger="test_logger"):
         test_logger.info(json.dumps(log_msg))
     found = False

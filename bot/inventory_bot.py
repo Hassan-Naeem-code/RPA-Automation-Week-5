@@ -6,22 +6,28 @@ Inventory Automation Bot
 - Handles errors and retries
 - Ready for horizontal scaling
 """
-import logging, logging.handlers, json, random, time, os
+import logging
+import logging.handlers
+import json
+import random
+import time
+import os
 from prometheus_client import start_http_server, Summary, Counter
 from multiprocessing import Process
-from bot.errors import InventoryAPIError, RetryableError, DeadLetterError
+from bot.errors import InventoryAPIError, RetryableError
 
 # Logging setup
 LOG_DIR = "../logs/"
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "inventory.log")
+
+
 class JsonLogFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
         }
-        # If the message is already a dict, merge it
         try:
             msg = json.loads(record.getMessage())
             if isinstance(msg, dict):
@@ -31,6 +37,7 @@ class JsonLogFormatter(logging.Formatter):
         except Exception:
             log_record["message"] = record.getMessage()
         return json.dumps(log_record)
+
 
 handler = logging.handlers.TimedRotatingFileHandler(
     filename=LOG_FILE, when="midnight", backupCount=7
@@ -43,10 +50,13 @@ logger.setLevel(logging.INFO)
 
 # Prometheus metrics
 REQUEST_LAT = Summary('inv_batch_seconds', 'Inventory batch duration')
-BATCH_COUNT = Counter('inv_batches_total', 'Total inventory batches processed', ['outcome'])
+BATCH_COUNT = Counter(
+    'inv_batches_total',
+    'Total inventory batches processed',
+    ['outcome']
+)
 
 # Simulated inventory batch processing
-
 @REQUEST_LAT.time()
 def process_batch(batch_id):
     duration = random.uniform(0.05, 0.2)
@@ -58,6 +68,7 @@ def process_batch(batch_id):
     elif r < 0.05:
         raise RetryableError("Temporary network issue")
     return duration
+
 
 def run_bot(worker_id=0, max_batches=1000, max_retries=3):
     dead_letter_queue = []
@@ -99,6 +110,7 @@ def run_bot(worker_id=0, max_batches=1000, max_retries=3):
             }))
             BATCH_COUNT.labels(outcome="dead_letter").inc()
             dead_letter_queue.append(batch_id)
+
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
