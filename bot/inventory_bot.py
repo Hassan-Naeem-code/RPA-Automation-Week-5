@@ -9,22 +9,35 @@ Inventory Automation Bot
 import logging, logging.handlers, json, random, time, os
 from prometheus_client import start_http_server, Summary, Counter
 from multiprocessing import Process
-from .errors import InventoryAPIError, RetryableError, DeadLetterError
+from bot.errors import InventoryAPIError, RetryableError, DeadLetterError
 
 # Logging setup
 LOG_DIR = "../logs/"
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "inventory.log")
+class JsonLogFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+        }
+        # If the message is already a dict, merge it
+        try:
+            msg = json.loads(record.getMessage())
+            if isinstance(msg, dict):
+                log_record.update(msg)
+            else:
+                log_record["message"] = msg
+        except Exception:
+            log_record["message"] = record.getMessage()
+        return json.dumps(log_record)
+
 handler = logging.handlers.TimedRotatingFileHandler(
     filename=LOG_FILE, when="midnight", backupCount=7
 )
-formatter = logging.Formatter(json.dumps({
-    "timestamp": "%(asctime)s",
-    "level": "%(levelname)s",
-    "message": "%(message)s"
-}))
-handler.setFormatter(formatter)
+handler.setFormatter(JsonLogFormatter())
 logger = logging.getLogger()
+logger.handlers = []
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 

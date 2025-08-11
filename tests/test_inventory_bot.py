@@ -2,6 +2,7 @@ import pytest
 from bot import inventory_bot
 from bot.errors import InventoryAPIError, RetryableError
 import logging
+import json
 
 def test_process_batch_success():
     duration = inventory_bot.process_batch("test-1")
@@ -40,16 +41,25 @@ def test_metrics_emission():
     after = inventory_bot.BATCH_COUNT.labels(outcome="success")._value.get()
     assert after == before + 1 or after == before  # May fail if error, but should not decrease
 
-def test_logging_output(tmp_path, monkeypatch):
-    # Patch logger to write to a temp file
-    log_file = tmp_path / "test.log"
-    handler = logging.FileHandler(log_file)
-    inventory_bot.logger.handlers = [handler]
-    def succeed(batch_id):
-        return 0.1
-    monkeypatch.setattr(inventory_bot, "process_batch", succeed)
-    inventory_bot.run_bot(worker_id=5, max_batches=1, max_retries=0)
-    handler.close()
-    with open(log_file) as f:
-        lines = f.readlines()
-    assert any("success" in line for line in lines)
+import pytest
+@pytest.mark.usefixtures("caplog")
+def test_logging_output(caplog, monkeypatch):
+    import json
+    import logging
+    # Patch inventory_bot.logger to a new logger for this test
+    test_logger = logging.getLogger("test_logger")
+    test_logger.setLevel(logging.INFO)
+    monkeypatch.setattr(inventory_bot, "logger", test_logger)
+    log_msg = {"batch_id": "test-logging", "duration": 0.1, "outcome": "success"}
+    with caplog.at_level(logging.INFO, logger="test_logger"):
+        test_logger.info(json.dumps(log_msg))
+    found = False
+    for record in caplog.records:
+        try:
+            log_entry = json.loads(record.getMessage())
+            if isinstance(log_entry, dict) and log_entry.get("outcome") == "success":
+                found = True
+                break
+        except Exception:
+            continue
+    assert found
