@@ -1,0 +1,3 @@
+[flake8]
+per-file-ignores =
+    tests/test_inventory_bot.py:E501
