@@ -76,8 +76,8 @@ def test_logging_output(caplog, monkeypatch):
                 break
         except Exception:
             continue
-    assert found, (
+    error_msg = (
         "Expected log entry not found. "
-        "Log entry with outcome 'success' was not "
-        "found."
+        "Log entry with outcome 'success' was not found."
     )
+    assert found, error_msg  # noqa: E501
