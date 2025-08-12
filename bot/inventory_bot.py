@@ -57,6 +57,8 @@ BATCH_COUNT = Counter(
 )
 
 # Simulated inventory batch processing
+
+
 @REQUEST_LAT.time()
 def process_batch(batch_id):
     duration = random.uniform(0.05, 0.2)

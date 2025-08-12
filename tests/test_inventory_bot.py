@@ -1,5 +1,3 @@
-
-
 import pytest
 from bot import inventory_bot
 from bot.errors import InventoryAPIError, RetryableError
@@ -49,7 +47,9 @@ def test_metrics_emission():
     inventory_bot.logger.disabled = True  # Silence logs
     inventory_bot.run_bot(worker_id=4, max_batches=1, max_retries=0)
     after = inventory_bot.BATCH_COUNT.labels(outcome="success")._value.get()
-    assert after == before + 1 or after == before
+    assert (
+        after == before + 1 or after == before
+    )
 
 
 @pytest.mark.usefixtures("caplog")
@@ -76,4 +76,8 @@ def test_logging_output(caplog, monkeypatch):
                 break
         except Exception:
             continue
-    assert found
+    assert found, (
+        "Expected log entry not found. "
+        "Log entry with outcome 'success' was not "
+        "found."
+    )

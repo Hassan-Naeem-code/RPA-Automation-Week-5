@@ -12,14 +12,22 @@ from prometheus_client import Summary, CollectorRegistry, write_to_textfile
 
 
 LOG_DIR = "../data/"
-LOG_FILE = os.path.join(LOG_DIR, "inventory_fake.log")
-METRICS_FILE = os.path.join(LOG_DIR, "inventory_metrics.prom")
+LOG_FILE = os.path.join(
+    LOG_DIR, "inventory_fake.log"
+)
+METRICS_FILE = os.path.join(
+    LOG_DIR, "inventory_metrics.prom"
+)
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Prometheus metric
 registry = CollectorRegistry()
-BATCH_LAT = Summary('inv_batch_seconds', 'Inventory batch duration', registry=registry)
+BATCH_LAT = Summary(
+    'inv_batch_seconds',
+    'Inventory batch duration',
+    registry=registry
+)
 
 outcomes = ["success", "error", "retry"]
 
@@ -42,6 +50,20 @@ with open(LOG_FILE, "w") as f:
         f.write(json.dumps(log) + "\n")
         BATCH_LAT.observe(duration)
 
+        f.write(
+            json.dumps({
+                "inventory_level": random.randint(0, 100),
+                "error_type": random.choice([
+                    'None', 'Stockout', 'Overstock'
+                ]),
+                "error_message": random.choice([
+                    '',
+                    'Stockout detected',
+                    'Overstock detected'
+                ])
+            })
+            + "\n"
+        )
 write_to_textfile(METRICS_FILE, registry)
 print(f"Generated logs: {LOG_FILE}")
 print(f"Generated metrics: {METRICS_FILE}")
