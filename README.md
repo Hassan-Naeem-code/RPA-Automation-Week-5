@@ -22,15 +22,4 @@ This project demonstrates a scalable, observable, and maintainable Python-based 
 - Maintenance: `/docs/maintenance_plan.md`
 - ROI Model: `/docs/roi.md`
 
-## Diagrams
-- See `/diagrams/` for architecture and monitoring visuals.
-
-## Slide Deck & Video
-- [Add your exported slides and video link here]
-
-## APA Citations
-- All external references are cited in APA 7 format in the docs and slides.
-
----
-
 **For a metrics demo, run the Prometheus example in `/docs/monitoring_plan.md` and view the `/data/inventory_metrics.prom` file.**
